@@ -1,6 +1,10 @@
+# The name by which the server will identify itself to other servers
+HOSTNAME    "example.com"
+
+
 # MAIL TRANSFER AGENT
 # This is the information for the MTA, which receives incoming mail from the
 # outside.
 MTA_ENABLED     true
-MTA_HOST        "localhost"
+MTA_HOST        "::1"
 MTA_PORT        25
