@@ -1,3 +1,10 @@
+'''Unstamp Mail Transfer Agent Server
+
+This server receives mail from the outside and sends it to the Mail Delivery
+Agent (mail_delivery.py) for delivery.
+'''
+
+
 from gevent import socket
 from gevent.server import StreamServer
 
