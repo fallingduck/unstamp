@@ -7,6 +7,7 @@ Agent (mail_delivery.py) for delivery.
 
 from gevent import socket
 from gevent.server import StreamServer
+from email.parser import FeedParser
 
 from .error import error
 from .util import writeline
@@ -16,24 +17,76 @@ _server = None
 _hostname = ''
 
 
+class _Envelope:
+    def __init__(self):
+        self.FROM = ''
+        self.RECIPIENTS = []
+        self.MESSAGE = None
+        self._FEEDER = None
+    def start_feed(self):
+        self._FEEDER = FeedParser()
+    def feed(self, lines):
+        self._FEEDER.feed(lines)
+        if lines.strip() == '.':
+            return False
+        return True
+    def end_feed(self):
+        self.MESSAGE = self._FEEDER.close()
+
+
 def _parse_request(request):
     request = request.strip()
-    verb = request[:request.index(' ')]
-    parameter = request[request.index(' ') + 1:].strip()
-    return verb, parameter
 
 
 def _accept(fp, host, port):
+
     writeline(fp, '220 {0} ESMTP'.format(_hostname))
     verb, parameter = _parse_request(fp.readline())
+
     if verb == 'HELO':
         client_name = parameter
-        # TODO: initialize envelope
+        envelope = _Envelope()
         writeline(fp, '250 OK')
+
     elif verb == 'EHLO':
         pass  # TODO
+
     else:
+        writeline(fp, '500 Unrecognized Response')
         return
+
+
+
+    while True:
+        verb, parameter = _parse_request(fp.readline())
+
+        if verb == 'MAIL':
+            envelope.RECIPIENTS = []
+            # TODO
+
+        elif verb == 'RCPT':
+            if not envelope.FROM:
+                writeline(fp, '503 Need MAIL Before RCPT')
+                continue
+            # TODO
+
+        elif verb == 'DATA':
+            if not envelope.RECIPIENTS:
+                writeline(fp, '503 Need RCPT Before Data')
+                continue
+            writeline(fp, '354 OK')
+            envelope.start_feed()
+            while envelope.feed(fp.readline()):
+                pass
+            envelope.end_feed()
+            # TODO
+
+        elif verb == 'QUIT':
+            writeline(fp, '221 Farewell')
+            break
+
+        else:
+            writeline(fp, '500 Unrecognized Response')
 
 
 def _handler(s, address):
