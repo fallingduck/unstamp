@@ -5,6 +5,8 @@ __version__ = 'pre-alpha'
 __license__ = 'ISC'
 
 
+from gevent import monkey; monkey.patch_all()
+
 from .error import error
 from .util import die
 from . import mail_smtp_server as smtp_server
