@@ -19,4 +19,4 @@ try:
                 key, value = _split(line)
                 config[key] = value
 except Exception:
-    raise error('Error reading config file config.dat')
+    raise error('Error reading config file')

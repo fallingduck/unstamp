@@ -5,7 +5,8 @@ __version__ = 'pre-alpha'
 __license__ = 'ISC'
 
 
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
 
 from .error import error
 from .util import die
@@ -17,11 +18,14 @@ except error as e:
     die(e)
 
 
-if config['MTA_ENABLED']:
-    print('Starting MTA server...')
+if 'MTA_BIND' in config:
+    print('Starting MTA server(s)...')
     try:
-        smtp_server.start(config['HOSTNAME'], config['MTA_HOST'], config['MTA_PORT'])
-        print('Done.')
+        for mta_host, mta_port in config['MTA_BIND']:
+            smtp_server.start(config['HOSTNAME'], mta_host, mta_port)
+            print('MTA server started on port {1} on {0}'.format(mta_host, mta_port))
+    except ValueError as e:
+        die('Bad value in config file: MTA_BIND')
     except KeyError as e:
         die('Missing value in config file: {0}'.format(e))
     except error as e:
