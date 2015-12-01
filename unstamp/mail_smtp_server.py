@@ -5,17 +5,16 @@ Agent (mail_delivery.py) for delivery.
 '''
 
 
-from gevent import socket, spawn
+from gevent import socket
 from gevent.server import StreamServer
 from email.parser import FeedParser
 
 from .error import error
-from .util import writeline
+from .util import writeline, spawn
 from .database import Address
 from .mail_delivery import deliver
 
 
-_server = None
 _hostname = ''
 
 
@@ -175,17 +174,15 @@ def _handler(s, address):
     s.close()
 
 
-def start(hostname, host, port):
-    global _server, _hostname
+def set_hostname(hostname):
+    global _hostname
     _hostname = hostname
+
+
+def start(host, port):
     try:
-        _server = StreamServer((host, port), _handler)
-        _server.start()
+        server = StreamServer((host, port), _handler)
+        server.start()
+        return server
     except PermissionError:
         raise error('Permission to access port {1} on {0} denied!'.format(host, port))
-
-
-def stop():
-    if _server is None:
-        raise error('stop() called, but Mail Transfer Agent server is not running!')
-    _server.stop()
