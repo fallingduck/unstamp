@@ -138,6 +138,9 @@ def _accept(fp, host, port):
             envelope = _Envelope()
             writeline(fp, '250 OK')
 
+        elif verb == 'NOOP':
+            writeline(fp, '250 OK')
+
         elif verb == 'QUIT':
             writeline(fp, '221 Farewell')
             break
