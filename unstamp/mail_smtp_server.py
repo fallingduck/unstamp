@@ -37,6 +37,14 @@ class _Envelope:
 
 def _parse_request(request):
     request = request.strip()
+    if ' ' in request:
+        space = request.index(' ')
+        verb = request[:space]
+        parameter = request[space:].lstrip()
+    else:
+        verb = request
+        parameter = ''
+    return verb, parameter
 
 
 def parse_address(encoded):
