@@ -5,13 +5,14 @@ Agent (mail_delivery.py) for delivery.
 '''
 
 
-from gevent import socket
+from gevent import socket, spawn
 from gevent.server import StreamServer
 from email.parser import FeedParser
 
 from .error import error
 from .util import writeline
 from .database import Address
+from .mail_delivery import deliver
 
 
 _server = None
@@ -26,9 +27,9 @@ class _Envelope:
         self._FEEDER = None
     def start_feed(self):
         self._FEEDER = FeedParser()
-    def feed(self, lines):
-        self._FEEDER.feed(lines)
-        if lines.strip() == '.':
+    def feed(self, line):
+        self._FEEDER.feed(line)
+        if line == '.\r\n':
             return False
         return True
     def end_feed(self):
@@ -88,8 +89,12 @@ def _accept(fp, host, port):
         helo_received = True
 
     elif verb == 'EHLO':
+        client_name = parameter
         helo_received = True
         # TODO
+
+    else:
+        client_name = ''
 
 
 
@@ -138,12 +143,14 @@ def _accept(fp, host, port):
             if not envelope.RECIPIENTS:
                 writeline(fp, '503 Need RCPT Before Data')
                 continue
-            writeline(fp, '354 OK')
             envelope.start_feed()
+            writeline(fp, '354 OK')
             while envelope.feed(fp.readline()):
                 pass
             envelope.end_feed()
-            # TODO
+            mailman = spawn(deliver, envelope)
+            writeline(fp, mailman.get())
+            envelope = _Envelope()
 
         elif verb == 'RSET':
             envelope = _Envelope()
@@ -163,6 +170,7 @@ def _accept(fp, host, port):
 def _handler(s, address):
     sf = s.makefile('r+', newline='')
     _accept(sf, *address)
+    sf.close()
     s.shutdown(socket.SHUT_RDWR)
     s.close()
 
