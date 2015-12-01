@@ -71,22 +71,25 @@ def _accept(fp, host, port):
     writeline(fp, '220 {0} ESMTP'.format(_hostname))
     verb, parameter = _parse_request(fp.readline())
 
+    envelope = _Envelope()
+    helo_received = False
+
     if verb == 'HELO':
         client_name = parameter
-        envelope = _Envelope()
         writeline(fp, '250 OK')
+        helo_received = True
 
     elif verb == 'EHLO':
-        pass  # TODO
-
-    else:
-        writeline(fp, '500 Unrecognized Response')
-        return
+        helo_received = True
+        # TODO
 
 
 
     while True:
-        verb, parameter = _parse_request(fp.readline())
+        if helo_received:
+            verb, parameter = _parse_request(fp.readline())
+        else:
+            helo_received = True
 
         if verb == 'MAIL':
             parameter = parameter.lower()
