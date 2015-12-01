@@ -21,7 +21,7 @@ _hostname = ''
 class _Envelope:
     def __init__(self):
         self.FROM = ''
-        self.RECIPIENTS = []
+        self.RECIPIENTS = set()
         self.MESSAGE = None
         self._FEEDER = None
     def start_feed(self):
@@ -98,7 +98,7 @@ def _accept(fp, host, port):
                 writeline(fp, '501 Malformatted Address')
                 continue
             envelope.FROM = mailfrom
-            envelope.RECIPIENTS = []
+            envelope.RECIPIENTS = set()
             writeline(fp, '250 OK')
 
         elif verb == 'RCPT':
@@ -120,7 +120,7 @@ def _accept(fp, host, port):
             if not account.exists():
                 writeline(fp, '550 Not A Valid Address')
                 continue
-            envelope.RECIPIENTS.append(account.get().forward_to)
+            envelope.RECIPIENTS.add(rcptto)
             writeline(fp, '250 OK')
 
         elif verb == 'DATA':
