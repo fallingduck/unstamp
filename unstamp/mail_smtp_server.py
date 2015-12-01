@@ -11,6 +11,7 @@ from email.parser import FeedParser
 
 from .error import error
 from .util import writeline
+from .database import Address
 
 
 _server = None
@@ -90,28 +91,37 @@ def _accept(fp, host, port):
         if verb == 'MAIL':
             parameter = parameter.lower()
             if parameter[:5] != 'from:':
-                writeline('500 No Address Given')
+                writeline(fp, '500 No Address Given')
                 continue
             mailfrom = parse_address(parameter[5:])
             if not mailfrom:
-                writeline('501 Malformatted Address')
+                writeline(fp, '501 Malformatted Address')
                 continue
             envelope.FROM = mailfrom
             envelope.RECIPIENTS = []
+            writeline(fp, '250 OK')
 
         elif verb == 'RCPT':
             if not envelope.FROM:
                 writeline(fp, '503 Need MAIL Before RCPT')
                 continue
+            if len(envelope.RECIPIENTS) >= 100:
+                writeline(fp, '452 Too Many Recipients')
+                continue
             parameter = parameter.lower()
             if parameter[:3] != 'to:':
-                writeline('500 No Address Given')
+                writeline(fp, '500 No Address Given')
                 continue
             rcptto = parse_address(parameter[3:])
             if rcptto is None:
-                writeline('501 Malformatted Address')
+                writeline(fp, '501 Malformatted Address')
                 continue
-            # TODO
+            account = Address.select().where(Address.email == rcptto)
+            if not account.exists():
+                writeline(fp, '550 Not A Valid Address')
+                continue
+            envelope.RECIPIENTS.append(account.get().forward_to)
+            writeline(fp, '250 OK')
 
         elif verb == 'DATA':
             if not envelope.RECIPIENTS:
