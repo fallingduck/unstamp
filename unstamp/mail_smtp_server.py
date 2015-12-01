@@ -134,6 +134,10 @@ def _accept(fp, host, port):
             envelope.end_feed()
             # TODO
 
+        elif verb == 'RSET':
+            envelope = _Envelope()
+            writeline(fp, '250 OK')
+
         elif verb == 'QUIT':
             writeline(fp, '221 Farewell')
             break
