@@ -10,7 +10,7 @@ from gevent.server import StreamServer
 from email.parser import FeedParser
 
 from .error import error
-from .util import writeline, spawn
+from .util import printerr, writeline, spawn, add_greenlet
 from .database import Address
 from .mail_delivery import deliver
 
@@ -167,11 +167,16 @@ def _accept(fp, host, port):
 
 
 def _handler(s, address):
+    add_greenlet()
     sf = s.makefile('r+', newline='')
-    _accept(sf, *address)
-    sf.close()
-    s.shutdown(socket.SHUT_RDWR)
-    s.close()
+    try:
+        _accept(sf, *address)
+    except BaseException as e:
+        printerr('MTA Server Handler: {0}'.format(e))
+    finally:
+        sf.close()
+        s.shutdown(socket.SHUT_RDWR)
+        s.close()
 
 
 def set_hostname(hostname):

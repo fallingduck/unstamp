@@ -9,7 +9,7 @@ from gevent import monkey, wait
 monkey.patch_all()
 
 from .error import error
-from .util import die, shutdown
+from .util import die, spawn, shutdown, greenlet_cleaner
 from . import mail_smtp_server as smtp_server
 
 try:
@@ -34,6 +34,8 @@ if 'MTA_BIND' in config:
         die('Missing value in config file: {0}'.format(e))
     except error as e:
         die(e)
+
+spawn(greenlet_cleaner)
 
 
 try:
