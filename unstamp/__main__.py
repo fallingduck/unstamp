@@ -26,6 +26,7 @@ if 'MTA_BIND' in config:
     try:
         for mta_host, mta_port in config['MTA_BIND']:
             smtp_server.set_hostname(config['HOSTNAME'])
+            smtp_server.set_maxsize(config['MTA_MAX_SIZE'])
             servers.append(smtp_server.start(mta_host, mta_port))
             print('MTA server started on port {1} of {0}'.format(mta_host, mta_port))
     except ValueError as e:

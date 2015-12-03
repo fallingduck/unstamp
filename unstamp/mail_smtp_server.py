@@ -7,7 +7,6 @@ Agent (mail_delivery.py) for delivery.
 
 from gevent import socket
 from gevent.server import StreamServer
-from email.parser import FeedParser
 
 from .error import error
 from .util import printerr, writeline, spawn, add_greenlet
@@ -16,6 +15,7 @@ from .mail_delivery import deliver
 
 
 _hostname = ''
+_maxsize = 0
 
 
 class _Envelope:
@@ -30,6 +30,10 @@ class _Envelope:
         if self.MESSAGE[-5:] == '\r\n.\r\n':
             return False
         return True
+    def valid(self, maxsize):
+        if not maxsize:
+            return True
+        return len(self.MESSAGE) <= maxsize
 
 
 def _parse_request(request):
@@ -88,6 +92,8 @@ def _accept(fp, host, port):
         client_name = parameter
         writeline(fp, '250-{0}'.format(_hostname))
         writeline(fp, '250-8BITMIME')
+        if _maxsize:
+            writeline(fp, '250-SIZE {0}'.format(_maxsize))
         writeline(fp, '250 PIPELINING')
         helo_received = True
 
@@ -111,6 +117,14 @@ def _accept(fp, host, port):
             if not mailfrom:
                 writeline(fp, '501 Malformatted Address')
                 continue
+            if _maxsize:
+                try:
+                    size = int(parameter.split(' size=')[-1].split(' ')[0])
+                    if size > _maxsize:
+                        writeline(fp, '552 Too Big')
+                        continue
+                except Exception:
+                    pass
             envelope.FROM = mailfrom
             envelope.RECIPIENTS = set()
             writeline(fp, '250 OK')
@@ -145,6 +159,10 @@ def _accept(fp, host, port):
             writeline(fp, '354 OK')
             while envelope.feed(fp.readline()):
                 pass
+            if not envelope.valid(_maxsize):
+                writeline(fp, '552 Too Big')
+                envelope = _Envelope()
+                continue
             mailman = spawn(deliver, envelope)
             writeline(fp, mailman.get())
             envelope = _Envelope()
@@ -186,6 +204,11 @@ def _handler(s, address):
 def set_hostname(hostname):
     global _hostname
     _hostname = hostname
+
+
+def set_maxsize(size):
+    global _maxsize
+    _maxsize = size
 
 
 def start(host, port):

@@ -5,4 +5,5 @@ HOSTNAME    "example.com"
 # MAIL TRANSFER AGENT
 # This is the information for the MTA, which receives incoming mail from the
 # outside.
-MTA_BIND    [ ["::1", 25], ["127.0.0.1", 25] ]
+MTA_BIND        [ ["::1", 25], ["127.0.0.1", 25] ]
+MTA_MAX_SIZE    10485760
