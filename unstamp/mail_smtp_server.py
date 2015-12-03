@@ -22,17 +22,14 @@ class _Envelope:
     def __init__(self):
         self.FROM = ''
         self.RECIPIENTS = set()
-        self.MESSAGE = None
-        self._FEEDER = None
+        self.MESSAGE = ''
     def start_feed(self):
-        self._FEEDER = FeedParser()
+        self.MESSAGE = ''
     def feed(self, line):
-        self._FEEDER.feed(line)
-        if line == '.\r\n':
+        self.MESSAGE += line
+        if self.MESSAGE[-5:] == '\r\n.\r\n':
             return False
         return True
-    def end_feed(self):
-        self.MESSAGE = self._FEEDER.close()
 
 
 def _parse_request(request):
@@ -148,7 +145,6 @@ def _accept(fp, host, port):
             writeline(fp, '354 OK')
             while envelope.feed(fp.readline()):
                 pass
-            envelope.end_feed()
             mailman = spawn(deliver, envelope)
             writeline(fp, mailman.get())
             envelope = _Envelope()
