@@ -162,6 +162,12 @@ def _accept(fp, host, port):
             writeline(fp, '221 Farewell')
             break
 
+        elif verb == 'VRFY':
+            if parameter:
+                writeline(fp, '252 Try Me')
+            else:
+                writeline(fp, '500 No VRFY Parameter')
+
         else:
             writeline(fp, '500 Unrecognized Response')
 
