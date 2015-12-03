@@ -89,8 +89,10 @@ def _accept(fp, host, port):
 
     elif verb == 'EHLO':
         client_name = parameter
+        writeline(fp, '250-{0}'.format(_hostname))
+        writeline(fp, '250-8BITMIME')
+        writeline(fp, '250 PIPELINING')
         helo_received = True
-        # TODO
 
     else:
         client_name = ''
