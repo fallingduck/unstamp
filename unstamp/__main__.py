@@ -9,7 +9,7 @@ from gevent import monkey, wait
 monkey.patch_all()
 
 from .error import error
-from .util import die, spawn, shutdown, greenlet_cleaner
+from .util import set_logging, die, spawn, shutdown, greenlet_cleaner
 from . import mail_smtp_server as smtp_server
 
 try:
@@ -20,6 +20,9 @@ except error as e:
 
 servers = []
 
+
+if 'LOGGING' in config:
+    set_logging(config['LOGGING'])
 
 if 'MTA_BIND' in config:
     print('Starting MTA server(s)...')

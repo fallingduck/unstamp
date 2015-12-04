@@ -9,7 +9,7 @@ from gevent import socket
 from gevent.server import StreamServer
 
 from .error import error
-from .util import printerr, writeline, readline, spawn, add_greenlet
+from .util import log, printerr, writeline, readline, spawn, add_greenlet
 from .database import Address
 from .mail_delivery import deliver
 
@@ -99,6 +99,11 @@ def _accept(s, host, port):
 
     else:
         client_name = ''
+
+    if client_name:
+        log('MTA: {0} identifies as {1}'.format(host, client_name))
+    else:
+        log('MTA: {0} did not identify!'.format(host))
 
 
 
@@ -190,13 +195,15 @@ def _accept(s, host, port):
 
 def _handler(s, address):
     add_greenlet()
+    log('MTA: Got connection from {0}'.format(address[0]))
     try:
         _accept(s, *address)
     except BaseException as e:
-        printerr('MTA Server Handler: {0}'.format(e))
+        printerr('MTA: {0}'.format(e))
     finally:
         s.shutdown(socket.SHUT_RDWR)
         s.close()
+        log('MTA: Connection from {0} closed'.format(address[0]))
 
 
 def set_hostname(hostname):

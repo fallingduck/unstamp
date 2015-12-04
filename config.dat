@@ -1,3 +1,7 @@
+# Enable or disable logging of server activity
+LOGGING     true
+
+
 # The name by which the server will identify itself to other servers
 HOSTNAME    "example.com"
 

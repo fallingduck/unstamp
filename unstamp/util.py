@@ -3,7 +3,18 @@ import io
 import gevent
 
 
+logging = False
 greenlets = []
+
+
+def set_logging(value):
+    global logging
+    logging = value
+
+
+def log(message):
+    if logging:
+        print(message)
 
 
 def printerr(message):
