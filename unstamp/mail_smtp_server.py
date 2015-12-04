@@ -9,7 +9,7 @@ from gevent import socket
 from gevent.server import StreamServer
 
 from .error import error
-from .util import log, printerr, writeline, readline, spawn, add_greenlet
+from .util import log, printerr, writeline, readline, readmessage, spawn, add_greenlet
 from .database import Address
 from .mail_delivery import deliver
 
@@ -22,9 +22,9 @@ class _Envelope:
     def __init__(self):
         self.reset()
     def reset(self):
-        self._from = ''
+        self._from = None
         self._recipients = set()
-        self._message = ''
+        self._message = None
     def mailfrom(self, addr):
         self._from = addr
     def received_from(self):
@@ -33,13 +33,8 @@ class _Envelope:
         self._recipients.append(addr)
     def rcpt_len(self):
         return len(self._recipients)
-    def start_feed(self):
-        self._message = ''
-    def feed(self, line):
-        self._message += line
-        if self._message[-5:] == '\r\n.\r\n':
-            return False
-        return True
+    def data(self, message):
+        self._message = message
     def valid(self, maxsize):
         if not maxsize:
             return True
@@ -170,10 +165,8 @@ def _accept(s, host, port):
             if not envelope.rcpt_len():
                 writeline(s, '503 Need RCPT Before Data')
                 continue
-            envelope.start_feed()
             writeline(s, '354 OK')
-            while envelope.feed(readline(s)):
-                pass
+            envelope.data(readmessage(s))
             if not envelope.valid(_maxsize):
                 writeline(s, '552 Too Big')
                 envelope = _Envelope()

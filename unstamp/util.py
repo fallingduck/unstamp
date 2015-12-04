@@ -37,7 +37,7 @@ def readline(s):
     gotcr = False
     while True:
         c = s.recv(1)
-        line.write(s.recv(1))
+        line.write(c)
         if c == '\r':
             gotcr = True
         elif c == '\n' and gotcr:
@@ -46,6 +46,35 @@ def readline(s):
             gotcr = False
     line.seek(0)
     return line.read()
+
+
+def readmessage(s):
+    message = io.BytesIO()
+    lastfive = ''
+    while True:
+        c = s.recv(1)
+        message.write(c)
+        if c == '\r':
+            if not lastfive:
+                lastfive = '\r'
+                continue
+            elif lastfive == '\r\n.':
+                lastfive = '\r\n.\r'
+                continue
+        elif c == '\n':
+            if lastfive == '\r':
+                lastfive = '\r\n'
+                continue
+            elif lastfive == '\r\n.\r':
+                break
+        elif c == '.':
+            if lastfive == '\r\n':
+                lastfive == '\r\n.'
+                continue
+        if lastfive:
+            lastfive = ''
+    message.seek(0)
+    return message.read()
 
 
 def spawn(*args, **kwargs):
