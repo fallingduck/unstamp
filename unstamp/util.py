@@ -1,4 +1,5 @@
 import sys
+import io
 import gevent
 
 
@@ -16,10 +17,24 @@ def die(message):
     sys.exit(1)
 
 
-def writeline(fp, line):
-    fp.write(line)
-    fp.write('\r\n')
-    fp.flush()
+def writeline(s, line):
+    s.sendall(bytes('{0}\r\n'.format(line), 'utf-8'))
+
+
+def readline(s):
+    line = io.BytesIO()
+    gotcr = False
+    while True:
+        c = s.recv(1)
+        line.write(s.recv(1))
+        if c == '\r':
+            gotcr = True
+        elif c == '\n' and gotcr:
+            break
+        elif gotcr:
+            gotcr = False
+    line.seek(0)
+    return line.read()
 
 
 def spawn(*args, **kwargs):

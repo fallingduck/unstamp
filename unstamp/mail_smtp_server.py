@@ -9,7 +9,7 @@ from gevent import socket
 from gevent.server import StreamServer
 
 from .error import error
-from .util import printerr, writeline, spawn, add_greenlet
+from .util import printerr, writeline, readline, spawn, add_greenlet
 from .database import Address
 from .mail_delivery import deliver
 
@@ -75,26 +75,26 @@ def parse_address(encoded):
         i += 1
 
 
-def _accept(fp, host, port):
+def _accept(s, host, port):
 
-    writeline(fp, '220 {0} ESMTP'.format(_hostname))
-    verb, parameter = _parse_request(fp.readline())
+    writeline(s, '220 {0} ESMTP'.format(_hostname))
+    verb, parameter = _parse_request(readline(s))
 
     envelope = _Envelope()
     helo_received = False
 
     if verb == 'HELO':
         client_name = parameter
-        writeline(fp, '250 OK')
+        writeline(s, '250 OK')
         helo_received = True
 
     elif verb == 'EHLO':
         client_name = parameter
-        writeline(fp, '250-{0}'.format(_hostname))
-        writeline(fp, '250-8BITMIME')
+        writeline(s, '250-{0}'.format(_hostname))
+        writeline(s, '250-8BITMIME')
         if _maxsize:
-            writeline(fp, '250-SIZE {0}'.format(_maxsize))
-        writeline(fp, '250 PIPELINING')
+            writeline(s, '250-SIZE {0}'.format(_maxsize))
+        writeline(s, '250 PIPELINING')
         helo_received = True
 
     else:
@@ -104,99 +104,97 @@ def _accept(fp, host, port):
 
     while True:
         if helo_received:
-            verb, parameter = _parse_request(fp.readline())
+            verb, parameter = _parse_request(readline(s))
         else:
             helo_received = True
 
         if verb == 'MAIL':
             parameter = parameter.lower()
             if parameter[:5] != 'from:':
-                writeline(fp, '500 No Address Given')
+                writeline(s, '500 No Address Given')
                 continue
             mailfrom = parse_address(parameter[5:])
             if not mailfrom:
-                writeline(fp, '501 Malformatted Address')
+                writeline(s, '501 Malformatted Address')
                 continue
             if _maxsize:
                 try:
                     size = int(parameter.split(' size=')[-1].split(' ')[0])
                     if size > _maxsize:
-                        writeline(fp, '552 Too Big')
+                        writeline(s, '552 Too Big')
                         continue
                 except Exception:
                     pass
             envelope.FROM = mailfrom
             envelope.RECIPIENTS = set()
-            writeline(fp, '250 OK')
+            writeline(s, '250 OK')
 
         elif verb == 'RCPT':
             if not envelope.FROM:
-                writeline(fp, '503 Need MAIL Before RCPT')
+                writeline(s, '503 Need MAIL Before RCPT')
                 continue
             if len(envelope.RECIPIENTS) >= 100:
-                writeline(fp, '452 Too Many Recipients')
+                writeline(s, '452 Too Many Recipients')
                 continue
             parameter = parameter.lower()
             if parameter[:3] != 'to:':
-                writeline(fp, '500 No Address Given')
+                writeline(s, '500 No Address Given')
                 continue
             rcptto = parse_address(parameter[3:])
             if rcptto is None:
-                writeline(fp, '501 Malformatted Address')
+                writeline(s, '501 Malformatted Address')
                 continue
             account = Address.select().where(Address.email == rcptto)
             if not account.exists():
-                writeline(fp, '550 Not A Valid Address')
+                writeline(s, '550 Not A Valid Address')
                 continue
             envelope.RECIPIENTS.add(rcptto)
-            writeline(fp, '250 OK')
+            writeline(s, '250 OK')
 
         elif verb == 'DATA':
             if not envelope.RECIPIENTS:
-                writeline(fp, '503 Need RCPT Before Data')
+                writeline(s, '503 Need RCPT Before Data')
                 continue
             envelope.start_feed()
-            writeline(fp, '354 OK')
-            while envelope.feed(fp.readline()):
+            writeline(s, '354 OK')
+            while envelope.feed(readline(s)):
                 pass
             if not envelope.valid(_maxsize):
-                writeline(fp, '552 Too Big')
+                writeline(s, '552 Too Big')
                 envelope = _Envelope()
                 continue
             mailman = spawn(deliver, envelope)
-            writeline(fp, mailman.get())
+            writeline(s, mailman.get())
             envelope = _Envelope()
 
         elif verb == 'RSET':
             envelope = _Envelope()
-            writeline(fp, '250 OK')
+            writeline(s, '250 OK')
 
         elif verb == 'NOOP':
-            writeline(fp, '250 OK')
+            writeline(s, '250 OK')
 
         elif verb == 'QUIT':
-            writeline(fp, '221 Farewell')
+            writeline(s, '221 Farewell')
             break
 
         elif verb == 'VRFY':
             if parameter:
-                writeline(fp, '252 Try Me')
+                writeline(s, '252 Try Me')
             else:
-                writeline(fp, '500 No VRFY Parameter')
+                writeline(s, '500 No VRFY Parameter')
 
         else:
-            writeline(fp, '500 Unrecognized Response')
+            writeline(s, '500 Unrecognized Response')
 
 
 def _handler(s, address):
     add_greenlet()
-    sf = s.makefile('r+', newline='')
     try:
-        _accept(sf, *address)
+        _accept(s, *address)
     except BaseException as e:
         printerr('MTA Server Handler: {0}'.format(e))
     finally:
-        sf.close()
         s.shutdown(socket.SHUT_RDWR)
         s.close()
 
