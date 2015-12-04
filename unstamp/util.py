@@ -3,17 +3,17 @@ import io
 import gevent
 
 
-logging = False
-greenlets = []
+_logging = False
+_greenlets = []
 
 
 def set_logging(value):
-    global logging
-    logging = value
+    global _logging
+    _logging = value
 
 
 def log(message):
-    if logging:
+    if _logging:
         print(message)
 
 
@@ -50,16 +50,16 @@ def readline(s):
 
 def spawn(*args, **kwargs):
     greenlet = gevent.spawn(*args, **kwargs)
-    greenlets.append(greenlet)
+    _greenlets.append(greenlet)
     return greenlet
 
 
 def add_greenlet():
-    greenlets.append(gevent.getcurrent())
+    _greenlets.append(gevent.getcurrent())
 
 
 def shutdown():
-    gevent.killall(greenlets)
+    gevent.killall(_greenlets)
 
 
 def greenlet_cleaner():
@@ -67,11 +67,11 @@ def greenlet_cleaner():
     while True:
         gevent.sleep(1000)
         gevent.idle()
-        if current not in greenlets:
-            greenlets.append(current)
+        if current not in _greenlets:
+            _greenlets.append(current)
         todelete = []
-        for i, greenlet in enumerate(greenlets):
+        for i, greenlet in enumerate(_greenlets):
             if greenlet.ready():
                 todelete.append(i)
         for i in todelete:
-            del greenlets[i]
+            del _greenlets[i]

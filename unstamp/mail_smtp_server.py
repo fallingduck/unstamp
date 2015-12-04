@@ -20,20 +20,30 @@ _maxsize = 0
 
 class _Envelope:
     def __init__(self):
-        self.FROM = ''
-        self.RECIPIENTS = set()
-        self.MESSAGE = ''
+        self.reset()
+    def reset(self):
+        self._from = ''
+        self._recipients = set()
+        self._message = ''
+    def mailfrom(self, addr):
+        self._from = addr
+    def received_from(self):
+        return bool(self._from)
+    def rcptto(self, addr):
+        self._recipients.append(addr)
+    def rcpt_len(self):
+        return len(self._recipients)
     def start_feed(self):
-        self.MESSAGE = ''
+        self._message = ''
     def feed(self, line):
-        self.MESSAGE += line
-        if self.MESSAGE[-5:] == '\r\n.\r\n':
+        self._message += line
+        if self._message[-5:] == '\r\n.\r\n':
             return False
         return True
     def valid(self, maxsize):
         if not maxsize:
             return True
-        return len(self.MESSAGE) <= maxsize
+        return len(self._message) <= maxsize
 
 
 def _parse_request(request):
@@ -130,15 +140,15 @@ def _accept(s, host, port):
                         continue
                 except Exception:
                     pass
-            envelope.FROM = mailfrom
-            envelope.RECIPIENTS = set()
+            envelope.reset()
+            envelope.mailfrom(mailfrom)
             writeline(s, '250 OK')
 
         elif verb == 'RCPT':
-            if not envelope.FROM:
+            if not envelope.received_from():
                 writeline(s, '503 Need MAIL Before RCPT')
                 continue
-            if len(envelope.RECIPIENTS) >= 100:
+            if envelope.rcpt_len() >= 100:
                 writeline(s, '452 Too Many Recipients')
                 continue
             parameter = parameter.lower()
@@ -153,11 +163,11 @@ def _accept(s, host, port):
             if not account.exists():
                 writeline(s, '550 Not A Valid Address')
                 continue
-            envelope.RECIPIENTS.add(rcptto)
+            envelope.rcptto(rcptto)
             writeline(s, '250 OK')
 
         elif verb == 'DATA':
-            if not envelope.RECIPIENTS:
+            if not envelope.rcpt_len():
                 writeline(s, '503 Need RCPT Before Data')
                 continue
             envelope.start_feed()
