@@ -12,7 +12,7 @@ unimportant mail server to.
 - Whitelist/Blacklist
 - Greylisting
 - Quotas
-- (CLI/Web) Admin Tools
+- CLI Admin Tools
     - (Re)start unstamp
     - View Server Status (e.g. queued mail)
     - Create/Modify/Delete Mail Accounts
@@ -24,4 +24,5 @@ unimportant mail server to.
 
 # Beyond 0.1.0
 
+- Web Admin Tools
 - Bayesian Spam Filter
